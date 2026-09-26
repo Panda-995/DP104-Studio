@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+build/
+dist/
+qa-screen.png
+backup-*.exe
+*.zip
+# 提取自设备的厂商固件，不随仓库分发（分析脚本正常提交）
+DP104-firmware-analysis/*.bin
+DP104-firmware-analysis/*.uf2

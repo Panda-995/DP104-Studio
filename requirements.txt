@@ -1,0 +1,5 @@
+hidapi>=0.14,<1
+pyserial>=3.5,<4
+Pillow>=10,<13
+pystray>=0.19,<1
+requests>=2.31,<3
