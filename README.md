@@ -63,3 +63,9 @@ $env:DP104_STUDIO_SMOKE='1'; .\.venv\Scripts\python.exe app.pyw
 ## 隐私
 
 只统计按键计数与矩阵位计数，不保存输入文本；API Key 只存在本机配置目录。
+
+---
+
+## 📄 许可证 / License
+
+本项目采用 [AGPL-3.0](LICENSE) 开源协议。
