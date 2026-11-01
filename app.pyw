@@ -456,7 +456,7 @@ class Studio:
         status = panel(page, "▣  键盘连接", 1, 0)
         self.home_device_label = label(status, "正在寻找 DP104…", 13, INK, True)
         self.home_device_label.pack(anchor="w", pady=(20, 8))
-        label(status, "内置模式走 HID；DIY 亮度会随动画重传。AI/特效画面经 USB 串口发送，动画传入后由键盘自己循环播放。",
+        label(status, "内置模式走 HID；DIY 亮度会随动画重传。AI/特效画面经 USB HID 或串口发送，动画传入后由键盘自己循环播放。",
               9, MUTED, wraplength=380, justify="left").pack(anchor="w")
         button(status, "去点阵工坊 →", lambda: self.change_page("screen"),
                tone="pink", pady=6).pack(anchor="w", pady=(22, 0))
@@ -531,7 +531,7 @@ class Studio:
         self.milestone_step.set(self.milestones.step)
         self.milestone_step.pack(side="left", padx=(8, 10))
         button(row2, "保存里程碑设置", self.save_milestone, tone="primary", pady=4).pack(side="left")
-        label(milestone, "庆祝帧只在串口空闲且屏幕不在 DIY 画面时推送，一天最多几次。",
+        label(milestone, "庆祝帧只在上传通道空闲且屏幕不在 DIY 画面时推送，一天最多几次。",
               9, MUTED, wraplength=940, justify="left").pack(anchor="w", pady=(1, 0))
 
         data = panel(page, "▣  数据", 0, 2, columnspan=2, pady=7)
