@@ -181,7 +181,7 @@ class Studio:
                              tone="pink" if page == self.page else "plain", width=14, pady=5)
             control.pack(side="left", padx=(0, 8))
             self.nav_buttons[page] = control
-        label(navigation, "8 × 24 像素 · 内置模式走 HID，画面上传走串口", 10, MUTED).pack(side="right")
+        label(navigation, "8 × 24 像素 · 自动识别 HID / 串口上传", 10, MUTED).pack(side="right")
 
         footer = tk.Frame(self.root, bg=INK, padx=25, pady=5)
         footer.pack(side="bottom", fill="x")
@@ -205,7 +205,7 @@ class Studio:
         page = self.screen_page
         page.grid_columnconfigure(0, weight=3)
         page.grid_columnconfigure(1, weight=2)
-        page.grid_rowconfigure(0, weight=0, minsize=292)
+        page.grid_rowconfigure(0, weight=0, minsize=330)
         page.grid_rowconfigure(1, weight=1, minsize=296)
 
         preview_card = panel(page, "▦  小屏幕预览", 0, 0)
@@ -216,20 +216,22 @@ class Studio:
         self.preview.bind("<Configure>", lambda event: self.draw_preview())
         self.preview_caption = label(preview_card, "火焰 · 点一下就能送上屏", 10, MUTED)
         self.preview_caption.pack(anchor="w", pady=(0, 4))
-        label(preview_card, "内置模式由固件自己渲染，即时生效不走串口", 10, INK, True).pack(anchor="w")
+        label(preview_card, "上传完成后，点「DIY / 自定义」播放；其余为键盘内置模式", 10, INK, True).pack(anchor="w")
         modes = tk.Frame(preview_card, bg=PAPER)
         modes.pack(fill="x", pady=(4, 0))
         self.mode_buttons = {}
-        for value, name in ((3, "连接状态"), (1, "打字"), (4, "烟花"),
-                            (5, "音乐"), (6, "滚动"), (0, "熄屏")):
+        for col in range(4):
+            modes.grid_columnconfigure(col, weight=1)
+        for index, (value, name) in enumerate(((2, "DIY / 自定义"), (3, "连接状态"), (1, "打字"),
+                                               (4, "烟花"), (5, "音乐"), (6, "滚动"), (0, "熄屏"))):
             control = button(modes, name, lambda m=value: self.set_mode(m), tone="plain", pady=4)
-            control.pack(side="left", padx=(0, 6))
+            control.grid(row=index // 4, column=index % 4, sticky="ew", padx=(0, 5), pady=(0, 4))
             self.mode_buttons[value] = control
 
         connection = panel(page, "✦  键盘连接", 1, 0)
         self.keyboard_label = label(connection, "正在寻找 DP104…", 17, INK, True)
         self.keyboard_label.pack(anchor="w", pady=(7, 2))
-        self.serial_label = label(connection, "USB 串口：探测中", 11, MUTED)
+        self.serial_label = label(connection, "上传通道：探测中", 11, MUTED)
         self.serial_label.pack(anchor="w")
         self.connection_tip = label(connection, "端口由设备序列号自动配对，不用手填 COM 号。", 9, MUTED,
                                     wraplength=330, justify="left")
@@ -454,7 +456,7 @@ class Studio:
         status = panel(page, "▣  键盘连接", 1, 0)
         self.home_device_label = label(status, "正在寻找 DP104…", 13, INK, True)
         self.home_device_label.pack(anchor="w", pady=(20, 8))
-        label(status, "内置模式走 HID；DIY 亮度会随动画重传。AI/特效画面经 USB 串口发送，动画传入后由键盘自己循环播放。",
+        label(status, "内置模式走 HID；DIY 亮度会随动画重传。AI/特效画面经 USB HID 或串口发送，动画传入后由键盘自己循环播放。",
               9, MUTED, wraplength=380, justify="left").pack(anchor="w")
         button(status, "去点阵工坊 →", lambda: self.change_page("screen"),
                tone="pink", pady=6).pack(anchor="w", pady=(22, 0))
@@ -529,7 +531,7 @@ class Studio:
         self.milestone_step.set(self.milestones.step)
         self.milestone_step.pack(side="left", padx=(8, 10))
         button(row2, "保存里程碑设置", self.save_milestone, tone="primary", pady=4).pack(side="left")
-        label(milestone, "庆祝帧只在串口空闲且屏幕不在 DIY 画面时推送，一天最多几次。",
+        label(milestone, "庆祝帧只在上传通道空闲且屏幕不在 DIY 画面时推送，一天最多几次。",
               9, MUTED, wraplength=940, justify="left").pack(anchor="w", pady=(1, 0))
 
         data = panel(page, "▣  数据", 0, 2, columnspan=2, pady=7)
@@ -689,11 +691,18 @@ class Studio:
             self.notice = "尚未连接键盘；画面已预览，连接后再点击上屏"
             return
         self.device.send("animation", (dim_frames(self.preview_frames, self.upload_brightness), self.preview_fps))
-        self.notice = "正在检查串口并发送画面…"
+        self.notice = "正在检查上传通道并发送画面…"
 
     def confirm_upload(self, parent=None):
         if not self.device_state.get("connected"):
             return True
+        if self.device_state.get("transport") == "hid":
+            return ask_confirm(
+                parent or self.root, "通过 HID 上传画面",
+                "将用当前预览覆盖键盘的自定义动画。\n\n"
+                "上传期间请勿拔线；完成后点预览下方「DIY / 自定义」播放。",
+                confirm="开始上传",
+            )
         ready = ask_confirm(
             parent or self.root,
             "上传前先切换屏幕",
@@ -1259,11 +1268,15 @@ class Studio:
         if not connected:
             text, color = "● 等待 DP104", YELLOW
             self.keyboard_label.config(text="键盘还没来")
-            self.serial_label.config(text="USB 串口：未连接")
+            self.serial_label.config(text="上传通道：未连接")
             self.home_device_label.config(text="DP104 未连接")
         else:
             self.keyboard_label.config(text=f"DP104 已连接 · {MODES.get(self.mode, '未知模式')}")
-            if serial_ok:
+            if self.device_state.get("transport") == "hid" and self.device_state.get("upload_ready"):
+                text, color = "● HID 可以上传", MINT
+                self.serial_label.config(text="USB HID：已连接 · 无需串口")
+                self.home_device_label.config(text="DP104 已连接 · HID 可上传")
+            elif serial_ok:
                 text, color = f"● {port} 可写", MINT
                 self.serial_label.config(text=f"USB 串口：{port} · 可以上传")
                 self.home_device_label.config(text=f"DP104 已连接 · {port} 可上传")
@@ -1389,7 +1402,7 @@ class Studio:
 
     def fire_milestone(self, keys: int):
         state = self.device_state
-        if not state.get("connected") or not state.get("serial") or self.mode == 2:
+        if not state.get("connected") or not (state.get("upload_ready") or state.get("serial")) or self.mode == 2:
             self.notice = f"达到 {keys:,} 键里程碑；屏幕不在可推送状态，本次不推送"
             return
         frames = make_milestone_frames(keys)
